@@ -8,6 +8,12 @@
 
 #define RC_NAME ".gltronrc"
 
+/* AmigaOS: no dot files; gltron.ini in the drawer's prefs/ */
+#ifdef __amigaos__
+#undef RC_NAME
+#define RC_NAME "gltron.ini"
+#endif
+
 /* Win32 port maintained by Andreas Umbach <marvin@dataway.ch> */
 #ifdef WIN32
 #include <windows.h>

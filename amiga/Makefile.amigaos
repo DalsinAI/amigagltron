@@ -10,7 +10,8 @@
 # and the game) and configure's definitions for a build with local data
 # (the drawer), sound and no network. SDL2KIT is the OpenGPU developer kit:
 # libSDL.a (sdl12-compat on SDL2.module), libSDL_gl.a and libGL.a
-# (GL.module), linked as its sdl-config --libs --gl gives them. DEPS has the
+# (GL.module), linked in the order its sdl-config --libs --gl gives (libSDL_gl.a
+# first, or libSDL.a's empty GL table wins). DEPS has the
 # Team's static libpng and zlib (/mnt/amigachrome/team2/deps/m68k-amigaos).
 # SDL_sound is replaced by amiga/sound_lite.c (WAV files only).
 
@@ -37,13 +38,13 @@ DEFS    = -D__amigaos__ -DPACKAGE=\"gltron\" -DVERSION=\"0.70\" -DHAVE_UNISTD_H=
 INC     = -Iamiga/include -Isrc/include -Ilua/include -Inebu/include \
           -Inebu/include/base -Inebu/include/scripting \
           -I$(SDL2KIT)/include -I$(SDL2KIT)/include/SDL -I$(DEPS)/include
-COMMON  = -noixemul $(OPT) $(CPU) -fno-common $(DEFS) $(INC) -w
+COMMON  = -noixemul $(OPT) $(CPU) -fno-common $(DEFS) $(INC) -w -MMD -MP
 # 2003's C: GCC 16's default C23 refuses its loose pointer types.
 CFLAGS  = $(COMMON) -std=gnu99 -Wno-error=incompatible-pointer-types
 CXXFLAGS = $(COMMON) -std=gnu++98 -Wno-psabi
 LDFLAGS = -noixemul $(CPU)
 LIBS    = -L$(DEPS)/lib -L$(SDL2KIT)/lib -lpng -lz \
-          -lSDL -Wl,-u,_SDL12Amiga_gl -lSDL_gl -lGL -lpthread -lm
+          -Wl,-u,_SDL12Amiga_gl -lSDL_gl -lSDL -lGL -lpthread -lm
 
 LUA_SRC = $(addprefix lua/src/,lapi.c lcode.c ldebug.c ldo.c lfunc.c lgc.c \
           llex.c lmem.c lobject.c lparser.c lstate.c lstring.c ltable.c \
@@ -108,6 +109,8 @@ dist: $(BUILD)/$(PROG) $(ICONS) AMIGA_PORT.md
 	cp amiga/icons/ReadMe.info $(OUT)/COPYING.txt.info
 	cd $(OUT) && find . -mindepth 1 -type d | while read d; do cp $(CURDIR)/amiga/icons/Folder.info "$$d.info"; done
 	cp amiga/icons/GLtron-drawer.info dist/GLtron.info
+
+-include $(OBJS:.o=.d)
 
 clean:
 	rm -rf $(BUILD)

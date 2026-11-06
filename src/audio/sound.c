@@ -40,7 +40,18 @@ void Sound_reloadTrack(void) {
 	scripting_GetGlobal("settings", "current_track", NULL);
   scripting_GetStringResult(&song);
   fprintf(stderr, "[sound] loading song %s\n", song);
+#ifdef __amigaos__
+  /* no song, no music (getPath() would stop the game) */
+  path = getPossiblePath( PATH_MUSIC, song );
+  if(!fileExists(path)) {
+    fprintf(stderr, "[sound] no song %s, no music\n", song);
+    free(path);
+    free(song);
+    return;
+  }
+#else
   path = getPath( PATH_MUSIC, song );
+#endif
   free(song);
   if(path == NULL) {
     fprintf(stderr, "[sound] can't find song...exiting\n");
@@ -96,8 +107,15 @@ void Sound_initTracks(void) {
   music_path = getDirectory( PATH_MUSIC );
 	soundList = readDirectoryContents(music_path, NULL);
   if(soundList->next == NULL) {
+#ifdef __amigaos__
+    /* The source has no music (it came with the binary packages): play
+       without it. */
+    fprintf(stderr, "[sound] no music files found, playing without music\n");
+    return;
+#else
     fprintf(stderr, "[sound] no music files found...exiting\n");
     exit(1); // FIXME: handle missing songs somewhere else
+#endif
   }
     
   i = 1;

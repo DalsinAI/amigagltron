@@ -1,6 +1,7 @@
 /* SDL_sound's interface, as much of it as GLtron uses, for amiga/sound_lite.c:
- * WAV files only, decoded with SDL's own SDL_LoadWAV_RW. GLtron's sounds are
- * WAVs (data/); its music folder is empty in the 0.70 source.
+ * PCM WAV files only, read with stdio (Sound_NewSampleFromFile; sdl12-compat's
+ * SDL_LoadWAV_RW does not come back on OpenGPU). GLtron's sounds are WAVs
+ * (data/); its music folder is empty in the 0.70 source.
  * The AmiCradle Team. GPL 2 or later, like GLtron. */
 #ifndef AMIGA_SDL_SOUND_H
 #define AMIGA_SDL_SOUND_H
@@ -46,6 +47,7 @@ int Sound_Quit(void);
 const Sound_DecoderInfo **Sound_AvailableDecoders(void);
 const char *Sound_GetError(void);
 Sound_Sample *Sound_NewSample(SDL_RWops *rw, const char *ext, Sound_AudioInfo *desired, Uint32 bufferSize);
+Sound_Sample *Sound_NewSampleFromFile(const char *path, Sound_AudioInfo *desired, Uint32 bufferSize);
 void Sound_FreeSample(Sound_Sample *sample);
 Uint32 Sound_Decode(Sound_Sample *sample);
 Uint32 Sound_DecodeAll(Sound_Sample *sample);
