@@ -9,7 +9,7 @@ const char* getHome() {
 }
 
 void dirSetup(const char *executable) {
-#ifdef LOCAL_DATA
+#if defined(LOCAL_DATA) && !defined(__amigaos__) /* Amiga: amiga/amiga_start.c */
 	goto_installpath(executable);
 #endif
   initDirectories();

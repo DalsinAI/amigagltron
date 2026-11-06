@@ -25,11 +25,20 @@ namespace Sound {
 #define BUFSIZE 1024 * 1024
     SDL_RWops *rwops;
 
+#ifdef __amigaos__
+    /* amiga/sound_lite.c reads the file itself: sdl12-compat's
+       SDL_LoadWAV_RW does not come back on OpenGPU */
+    (void)rwops;
+    Sound_Sample *sample = Sound_NewSampleFromFile(filename,
+					   _system->GetAudioInfo(),
+					   _buffersize );
+#else
     rwops = SDL_RWFromFile(filename, "rb");
 
     Sound_Sample *sample = Sound_NewSample(rwops, NULL,
 					   _system->GetAudioInfo(),
 					   _buffersize );
+#endif
     if(sample == NULL) {
       fprintf(stderr, "[error] failed loading sample from '%s': %s\n", 
 	      filename, Sound_GetError());

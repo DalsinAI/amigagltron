@@ -215,15 +215,15 @@ extern "C" {
   }
 
   void Audio_PlayMusic(void) {
-    music->Start();
+    if(music) music->Start(); /* none without a song */
   }
 
   void Audio_StopMusic(void) {
-    music->Stop();
+    if(music) music->Stop();
   }
 
   void Audio_SetMusicVolume(float volume) {
-    music->SetVolume(volume);
+    if(music) music->SetVolume(volume);
   }
   
   void Audio_SetFxVolume(float volume) {

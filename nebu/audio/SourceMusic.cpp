@@ -51,16 +51,26 @@ namespace Sound {
 	*/
 
   void SourceMusic::CreateSample(void) {
+#ifdef __amigaos__
+    _rwops = NULL; /* amiga/sound_lite.c reads the file itself */
+#else
     _rwops = SDL_RWFromFile(_filename, "rb");
+#endif
 	char *ext = _filename;
 	for(int i = 0; *(_filename + i); i++)
 	{
 		if(*(_filename + i) == '.')
 			ext = _filename + i + 1;
 	}
+#ifdef __amigaos__
+    _sample = Sound_NewSampleFromFile(_filename,
+															_system->GetAudioInfo(),
+															_sample_buffersize );
+#else
     _sample = Sound_NewSample(_rwops, ext,
 															_system->GetAudioInfo(),
 															_sample_buffersize );
+#endif
 
     if(_sample == NULL) {
 		fprintf(stderr, "[error] failed loading sample type %s, from %s: %s\n", ext,
