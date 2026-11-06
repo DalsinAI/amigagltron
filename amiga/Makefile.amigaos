@@ -1,0 +1,115 @@
+# GLtron 0.70 for AmigaOS 3.x, 68040/68060 + FPU, on OpenGPU's SDL 1.2
+# (sdl12-compat) and OpenGL.
+#
+#   make -f amiga/Makefile.amigaos -j2 dist \
+#        STOVE=/path/to/openamigagcc-16.2.0-open4 \
+#        NDK=/path/to/OpenNDK/Include_H SDL2KIT=/path/to/opengpu-sdk \
+#        DEPS=/path/to/m68k-amigaos
+#
+# configure is not run: these are the Makefile.am's sources (Lua 5.0, nebu
+# and the game) and configure's definitions for a build with local data
+# (the drawer), sound and no network. SDL2KIT is the OpenGPU developer kit:
+# libSDL.a (sdl12-compat on SDL2.module), libSDL_gl.a and libGL.a
+# (GL.module), linked as its sdl-config --libs --gl gives them. DEPS has the
+# Team's static libpng and zlib (/mnt/amigachrome/team2/deps/m68k-amigaos).
+# SDL_sound is replaced by amiga/sound_lite.c (WAV files only).
+
+STOVE   ?= $(HOME)/CradleLab/toolchain/openamigagcc-16.2.0-open4-x86_64-linux
+NDK     ?= $(HOME)/CradleLab/gfopensdk/OpenNDK/Include_H
+SDL2KIT ?= /mnt/amigachrome/team2/deps/opengpu-sdk
+DEPS    ?= /mnt/amigachrome/team2/deps/m68k-amigaos
+CC      = $(STOVE)/bin/m68k-amigaos-gcc
+CXX     = $(STOVE)/bin/m68k-amigaos-g++
+STRIP   = $(STOVE)/bin/m68k-amigaos-strip
+CPU     ?= -m68040 -m68881
+# -fno-tree-loop-distribute-patterns: GCC 16's loop miscompile (the kit's
+# sdl2-config gives it for GCC 16 too).
+OPT     ?= -O2 -fomit-frame-pointer -fno-tree-loop-distribute-patterns
+
+BUILD   = build/amigaos
+OBJDIR  = $(BUILD)/obj
+PROG    = GLtron
+OUT     = dist/GLtron
+
+DEFS    = -D__amigaos__ -DPACKAGE=\"gltron\" -DVERSION=\"0.70\" -DHAVE_UNISTD_H=1 \
+          -DLOCAL_DATA -DPREF_DIR=\"prefs\" -DSNAP_DIR=\"snapshots\" \
+          -DSEPARATOR="'/'" -DNO_SDL_GLU
+INC     = -Iamiga/include -Isrc/include -Ilua/include -Inebu/include \
+          -Inebu/include/base -Inebu/include/scripting \
+          -I$(SDL2KIT)/include -I$(SDL2KIT)/include/SDL -I$(DEPS)/include
+COMMON  = -noixemul $(OPT) $(CPU) -fno-common $(DEFS) $(INC) -w
+# 2003's C: GCC 16's default C23 refuses its loose pointer types.
+CFLAGS  = $(COMMON) -std=gnu99 -Wno-error=incompatible-pointer-types
+CXXFLAGS = $(COMMON) -std=gnu++98 -Wno-psabi
+LDFLAGS = -noixemul $(CPU)
+LIBS    = -L$(DEPS)/lib -L$(SDL2KIT)/lib -lpng -lz \
+          -lSDL -Wl,-u,_SDL12Amiga_gl -lSDL_gl -lGL -lpthread -lm
+
+LUA_SRC = $(addprefix lua/src/,lapi.c lcode.c ldebug.c ldo.c lfunc.c lgc.c \
+          llex.c lmem.c lobject.c lparser.c lstate.c lstring.c ltable.c \
+          ltests.c ltm.c lundump.c lvm.c lzio.c) \
+          $(addprefix lua/src/lib/,lauxlib.c lbaselib.c ldblib.c liolib.c \
+          lmathlib.c lstrlib.c)
+NEBU_SRC = $(addprefix nebu/base/,geom.c vector.c matrix.c random.c util.c system.c) \
+          $(addprefix nebu/filesystem/,filesystem.c file_io.c directory.c findpath.c) \
+          nebu/input/system_keynames.c nebu/input/input_system.c \
+          nebu/scripting/scripting.c \
+          $(addprefix nebu/video/,console.c pixels.c png_texture.c video_system.c)
+NEBU_CXX = $(addprefix nebu/audio/,SoundSystem.cpp Source.cpp Source3D.cpp \
+          SourceCopy.cpp SourceEngine.cpp SourceMusic.cpp SourceSample.cpp)
+GAME_SRC = src/gltron.c src/audio/sound.c src/base/util.c \
+          src/configuration/settings.c \
+          src/filesystem/path.c src/filesystem/dirsetup.c \
+          $(addprefix src/game/,camera.c computer.c computer_utilities.c \
+          credits.c engine.c event.c game.c globals.c gui.c init.c init_sdl.c \
+          menu.c pause.c timedemo.c switchCallbacks.c scripting_interface.c) \
+          src/input/input.c \
+          $(addprefix src/video/,artpack.c explosion.c fonts.c fonttex.c \
+          gamegraphics.c graphics_fx.c graphics_hud.c graphics_lights.c \
+          graphics_utility.c graphics_world.c load_texture.c material.c \
+          model.c recognizer.c screenshot.c skybox.c texture.c trail.c \
+          trail_geometry.c trail_render.c video.c visuals_2d.c)
+GAME_CXX = src/audio/sound_glue.cpp
+CSRC    = amiga/amiga_start.c amiga/amiga_screens.c amiga/stack.c amiga/sound_lite.c
+
+OBJS    = $(LUA_SRC:%.c=$(OBJDIR)/%.o) $(NEBU_SRC:%.c=$(OBJDIR)/%.o) \
+          $(NEBU_CXX:%.cpp=$(OBJDIR)/%.o) $(GAME_SRC:%.c=$(OBJDIR)/%.o) \
+          $(GAME_CXX:%.cpp=$(OBJDIR)/%.o) $(CSRC:%.c=$(OBJDIR)/%.o)
+ICONS   = $(wildcard amiga/icons/*.info)
+
+all: $(BUILD)/$(PROG)
+
+$(BUILD)/$(PROG): $(OBJS)
+	$(CXX) $(LDFLAGS) -o $@.debug $(OBJS) $(LIBS)
+	$(STRIP) -o $@ $@.debug
+
+$(OBJDIR)/amiga/%.o: amiga/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -I$(NDK) -c -o $@ $<
+
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+# The drawer: the program, the game's data, art and scripts, ReadMe and the
+# licence. prefs/ and snapshots/ are made at the first start.
+dist: $(BUILD)/$(PROG) $(ICONS) AMIGA_PORT.md
+	rm -rf $(OUT) && mkdir -p $(OUT)/music
+	cp $(BUILD)/$(PROG) $(OUT)/
+	for d in data art scripts; do mkdir -p $(OUT)/$$d && \
+	  (cd $$d && find . -type f ! -name 'Makefile*' | cpio -pdm --quiet ../$(OUT)/$$d); done
+	cp AMIGA_PORT.md $(OUT)/ReadMe
+	cp COPYING $(OUT)/COPYING.txt
+	cp amiga/icons/GLtron.info amiga/icons/ReadMe.info $(OUT)/
+	cp amiga/icons/ReadMe.info $(OUT)/COPYING.txt.info
+	cd $(OUT) && find . -mindepth 1 -type d | while read d; do cp $(CURDIR)/amiga/icons/Folder.info "$$d.info"; done
+	cp amiga/icons/GLtron-drawer.info dist/GLtron.info
+
+clean:
+	rm -rf $(BUILD)
+
+.PHONY: all clean dist
