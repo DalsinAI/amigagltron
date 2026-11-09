@@ -2,6 +2,7 @@
 
 #include "SDL.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 Callbacks *current = 0;
 static int return_code = -1;
@@ -36,8 +37,11 @@ int SystemMainLoop() {
 				SystemHandleInput(&event);
 				break;
 			case SDL_QUIT:
+				/* SDL is gone after SystemExit(): end here, as the credits'
+				   quit does, or the loop keeps drawing with no SDL and the
+				   program never returns to the Shell. */
 				SystemExit();
-				break;
+				exit(0);
 			default:
 				/* ignore event */
 				break;
