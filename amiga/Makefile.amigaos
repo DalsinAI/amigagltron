@@ -104,6 +104,7 @@ dist: $(BUILD)/$(PROG) $(ICONS) AMIGA_PORT.md
 	for d in data art scripts; do mkdir -p $(OUT)/$$d && \
 	  (cd $$d && find . -type f ! -name 'Makefile*' | cpio -pdm --quiet ../$(OUT)/$$d); done
 	cp AMIGA_PORT.md $(OUT)/ReadMe
+	cp amiga/Controls $(OUT)/Controls
 	cp COPYING $(OUT)/COPYING.txt
 	cp amiga/icons/GLtron.info amiga/icons/ReadMe.info $(OUT)/
 	cp amiga/icons/ReadMe.info $(OUT)/COPYING.txt.info
