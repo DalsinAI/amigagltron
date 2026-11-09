@@ -107,7 +107,6 @@ dist: $(BUILD)/$(PROG) $(ICONS) AMIGA_PORT.md
 	cp COPYING $(OUT)/COPYING.txt
 	cp amiga/icons/GLtron.info amiga/icons/ReadMe.info $(OUT)/
 	cp amiga/icons/ReadMe.info $(OUT)/COPYING.txt.info
-	cd $(OUT) && find . -mindepth 1 -type d | while read d; do cp $(CURDIR)/amiga/icons/Folder.info "$$d.info"; done
 	cp amiga/icons/GLtron-drawer.info dist/GLtron.info
 
 -include $(OBJS:.o=.d)
